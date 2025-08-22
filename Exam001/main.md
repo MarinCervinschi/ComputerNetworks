@@ -9,7 +9,8 @@ Dati dal testo
 - `H1`: `10.0.1.1` -> DHCP (calcola pure il MAC)
 - `H2`: DHCP
 
-*per calcolare il MAC
+\*per calcolare il MAC
+
 ```bash
 ip addr show eth0
 ```
@@ -57,6 +58,7 @@ Fornito dal testo:
 - `eth0`: `2.3.4.5/32`
 
 ## Configurazione VLAN
+
 Dentro lo SWITCH S1
 
 ```test
@@ -85,12 +87,7 @@ iface eth0 inet dhcp
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-
-if [ $? -eq 0 ]; then
-    echo "H1 network configuration added."
-else
-    echo "Failed to add H1 network configuration."
-fi
+echo "H1 network configuration added."
 ```
 
 ### H2
@@ -105,12 +102,7 @@ iface eth0 inet dhcp
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-
-if [ $? -eq 0 ]; then
-    echo "H2 network configuration added."
-else
-    echo "Failed to add H2 network configuration."
-fi
+echo "H2 network configuration added."
 ```
 
 ### Srv
@@ -127,12 +119,7 @@ iface eth0 inet static
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-
-if [ $? -eq 0 ]; then
-    echo "Srv network configuration added."
-else
-    echo "Failed to add Srv network configuration."
-fi
+echo "Srv network configuration added."
 ```
 
 ### Ext
@@ -145,16 +132,11 @@ auto eth0
 iface eth0 inet static
         address 2.3.4.5
         netmask 255.255.255.255
-        gateway 5.4.3.2/32
+        gateway 5.4.3.2
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-
-if [ $? -eq 0 ]; then
-    echo "Ext network configuration added."
-else
-    echo "Failed to add Ext network configuration."
-fi
+echo "Ext network configuration added."
 ```
 
 ### GW
@@ -178,16 +160,11 @@ iface eth1 inet static
         address 5.4.3.2
         netmask 255.255.255.255
 
-post-up ip route add 2.3.4.5/32 via 5.4.3.2/32 dev eth1
+post-up ip route add 2.3.4.5 via 5.4.3.2 dev eth1
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-
-if [ $? -eq 0 ]; then
-    echo "GW network configuration added."
-else
-    echo "Failed to add GW network configuration."
-fi
+echo "GW network configuration added."
 
 dnsmasq="
 no-resolv
@@ -207,42 +184,57 @@ dhcp-range=10.0.1.2,10.0.1.125,255.255.255.128,12h
 "
 
 echo "$dnsmasq" >> /etc/dnsmasq.conf
-
-if [ $? -eq 0 ]; then
-    echo "dnsmasq configuration added."
-else
-    echo "Failed to add dnsmasq configuration."
-fi
+echo "dnsmasq configuration added."
 
 echo "Eseguo comandi di configurazione"
 systemctl enable dnsmasq
-systemctl restart dnsmasq
-
 if [ $? -eq 0 ]; then
-    echo "dnsmasq restarted successfully."
-else
-    echo "Failed to restart dnsmasq."
+    systemctl restart dnsmasq
+    if [ $? -eq 0 ]; then
+        echo "dnsmasq restarted successfully."
+    else
+        echo "Failed to restart dnsmasq."
+        echo "Check the dnsmasq logs for more information."
+        echo "Exec -> dnsmasq --test or journalctl -xe"
+        exit 1
+    fi
     echo "Verifica la configurazione di dnsmasq:"
     dnsmasq --test
+    if [ $? -eq 0 ]; then
+        echo "dnsmasq configuration is valid."
+    else
+        echo "dnsmasq configuration is invalid."
+        exit 1
+    fi
+else
+    echo "Failed to enable dnsmasq."
+    exit 1
 fi
 
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 echo "Ip configurato correttamente."
 
 sysctl -p /etc/sysctl.conf
+if [ $? -eq 0 ]; then
+    echo "sysctl configuration reloaded successfully."
+else
+    echo "Failed to reload sysctl configuration."
+    exit 1
+fi
 
 ```
 
->**⚠️🚨** Ricordiamo di tirare su tutte le interfacce con `ifup -a`
+> **⚠️🚨** Ricordiamo di tirare su tutte le interfacce con `ifup -a`
 
 ### Testare FLOW
 
-| Test | Comando | Result |
-| --- | --- | --- |
-| `H1 → H2` ping | `ping H2` | Successo |
-| `H2 → H1` ping | `ping H1` | Successo |
-| `H1 → Srv` ping (passa da GW) | `ping 10.0.1.129` | Successo |
-| `H1 → Srv` arping  | `arping 10.0.1.129` | Fallimento, non sono nella stessa VLAN |
-| `H1 → GW` ping | `ping 10.0.1.126` | Successo |
-| `H1 → GW` ping | `ping 10.0.1.254` | Successo |
-| `H1 → Ext` ping | `ping 2.3.4.5` | Successo |
+| Test                          | Comando             | Result                                 |
+| ----------------------------- | ------------------- | -------------------------------------- |
+| `H1 → H2` ping                | `ping H2`           | Successo                               |
+| `H2 → H1` ping                | `ping H1`           | Successo                               |
+| `H1 → Srv` ping (passa da GW) | `ping 10.0.1.129`   | Successo                               |
+| `H1 → Srv` arping             | `arping 10.0.1.129` | Fallimento, non sono nella stessa VLAN |
+| `H1 → GW` ping                | `ping 10.0.1.126`   | Successo                               |
+| `H1 → GW` ping                | `ping 10.0.1.254`   | Successo                               |
+| `H1 → Ext` ping               | `ping 2.3.4.5`      | Successo                               |
+| `H1 → Ext` ping               | `ping 5.4.3.2`      | Successo                               |
