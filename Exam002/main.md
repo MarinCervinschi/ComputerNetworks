@@ -231,8 +231,8 @@ Elementi di valutazione:
      - command -> `ping 2.2.2.2`
 6. Il DNAT funziona correttamente (verificare con nc)
    - Eseguire il comando `nc -l -p 8080` su H3
-        - (Attivi il listener)
+     - (Attivi il listener)
    - Eseguire il comando `nc 1.1.1.1 8080` su Ext
-        - (Invia un pacchetto)
+     - (Invia un pacchetto)
    - Verificare che i pacchetti vengano ricevuti su H3
-        - Provo a scrivere qualcosa nella connessione su `Ext` e verifico che arrivi su `H3`
+     - Provo a scrivere qualcosa nella connessione su `Ext` e verifico che arrivi su `H3`
