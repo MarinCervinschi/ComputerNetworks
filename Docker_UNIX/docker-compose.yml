@@ -1,0 +1,10 @@
+
+services:
+  socket-dev:
+    build: .
+    container_name: socket_lab
+    hostname: socket_lab
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./workspace:/workspace
