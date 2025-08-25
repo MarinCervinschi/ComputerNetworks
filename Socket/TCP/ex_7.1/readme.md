@@ -25,8 +25,6 @@ La correttezza i quanto fatto si puo valutare con le seguenti osservazioni:
 - Corretta interoperabilita tra le versioni Python e C del software (server Python e client C)
 - Corretto funzionamento della versione che supporta richieste multiple
 
-Ecco l'implementazione dei programmi client e server secondo le specifiche richieste:
-
 ### Istruzioni per l'uso:
 
 1. **Avvio del server**:
