@@ -38,7 +38,7 @@ iface eth0 inet static
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-echo "H1 network configuration added."
+echo "<M> H1 network configuration added."
 
 ```
 
@@ -57,7 +57,7 @@ iface eth0 inet static
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-echo "Srv1 network configuration added."
+echo "<M> Srv1 network configuration added."
 ```
 
 ### H2
@@ -75,7 +75,7 @@ iface eth0 inet static
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-echo "H2 network configuration added."
+echo "<M> H2 network configuration added."
 
 ```
 
@@ -94,7 +94,7 @@ iface eth0 inet static
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-echo "Srv2 network configuration added."
+echo "<M> Srv2 network configuration added."
 ```
 
 ### Ext
@@ -112,7 +112,7 @@ iface eth0 inet static
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-echo "Ext network configuration added."
+echo "<M> Ext network configuration added."
 ```
 
 ### GW
@@ -140,16 +140,16 @@ post-up ip route add 2.2.2.2 dev eth1
 "
 
 echo "$interfaces" >> /etc/network/interfaces
-echo "GW network configuration added."
+echo "<M> GW network configuration added."
 
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
-echo "Ip configurato correttamente."
+echo "<M> Ip configurato correttamente."
 
 sysctl -p /etc/sysctl.conf
 if [ $? -eq 0 ]; then
-    echo "sysctl configuration reloaded successfully."
+    echo "<M> sysctl configuration reloaded successfully."
 else
-    echo "Failed to reload sysctl configuration."
+    echo "<M> Failed to reload sysctl configuration."
     exit 1
 fi
 
