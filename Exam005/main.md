@@ -229,50 +229,39 @@ fi
 ```bash
 #!/bin/bash
 
-# Prima di tutto faccio il flush
-iptables -F # cancello tutte le regole esistenti
-iptables -t nat -F # cancello tutte le regole NAT esistenti
-iptables -X # cancello tutte le catene personalizzate
+# Interfacce
+PUB_IF=eth0.20   # lato client/GWC
+SRV_IF=eth0.10   # lato server
+WEBSRV=192.168.200.1
+MAILSRV=192.168.200.2
 
-# Policy di default (blocco totale)
-iptables -t filter -P INPUT DROP
-iptables -t filter -P OUTPUT DROP
-iptables -t filter -P FORWARD DROP
+# Flush
+iptables -F
+iptables -t nat -F
+iptables -X
 
-# Pacchetti ICMP
-iptables -t filter -A INPUT   -p icmp -j ACCEPT
-iptables -t filter -A OUTPUT  -p icmp -j ACCEPT
-iptables -t filter -A FORWARD -p icmp -j ACCEPT
+# Policy default
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT   # consigliato: lasciare GWS parlare col mondo
 
-# DNAT
-# -t nat -> significa "table nat", ovvero la tabella NAT
-# -A PREROUTING -> aggiunge una regola nella catena PREROUTING
-# -i <INTERFACE> -> specifica l'interfaccia di ingresso
-# -p <PROTOCOL> -> specifica il protocollo (tcp, udp, ecc.)
-# --dport <PORT> -> specifica la porta di destinazione
-# -s <SOURCE_IP> -> specifica l'indirizzo IP sorgente
-# -d <DESTINATION_IP> -> specifica l'indirizzo IP di destinazione
-# -j DNAT -> applica la regola di DNAT
-# --to-destination <IP>:<PORT> -> specifica l'indirizzo IP e la porta di destinazione
+# ICMP ovunque
+iptables -A INPUT   -p icmp -j ACCEPT
+iptables -A OUTPUT  -p icmp -j ACCEPT
+iptables -A FORWARD -p icmp -j ACCEPT
 
+# Consenti traffico già stabilito/relativo
+iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# WebSrv
-iptables -t nat -A PREROUTING -i eth0.20 -p tcp --dport 80 -j DNAT --to-destination 192.168.200.1:80
+# DNAT WebSrv (HTTP)
+iptables -t nat -A PREROUTING -i $PUB_IF -p tcp --dport 80 -j DNAT --to-destination $WEBSRV:80
+iptables -A FORWARD -i $PUB_IF -o $SRV_IF -d $WEBSRV -p tcp --dport 80 -j ACCEPT
 
-iptables -t filter -A FORWARD -i eth0.20 -o eth0.10 -d 192.168.200.1 -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -t filter -A FORWARD -i eth0.10 -o eth0.20 -s 192.168.200.1 -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
+# DNAT MailSrv (SMTP)
+iptables -t nat -A PREROUTING -i $PUB_IF -p tcp --dport 25 -j DNAT --to-destination $MAILSRV:25
+iptables -A FORWARD -i $PUB_IF -o $SRV_IF -d $MAILSRV -p tcp --dport 25 -j ACCEPT
 
-# MailSrv
-iptables -t nat -A PREROUTING -i eth0.20 -p tcp --dport 25 -j DNAT --to-destination 192.168.200.2:25
-iptables -t filter -A FORWARD -i eth0.20 -o eth0.10 -d 192.168.200.2 -p tcp --dport 25 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -t filter -A FORWARD -i eth0.10 -o eth0.20 -s 192.168.200.2 -p tcp --sport 25 -m state --state ESTABLISHED -j ACCEPT
-
-if [ $? -eq 0 ]; then
-    echo "<M> DNAT configuration added."
-else
-    echo "<M> Failed to add DNAT configuration."
-    exit 1
-fi
+echo "<M> DNAT + firewall configurato su GWS."
 ```
 
 ## 🔹 Tabella di test
