@@ -243,7 +243,7 @@ iptables -X
 # Policy default
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
-iptables -P OUTPUT ACCEPT   # consigliato: lasciare GWS parlare col mondo
+iptables -P OUTPUT ACCEPT
 
 # ICMP ovunque
 iptables -A INPUT   -p icmp -j ACCEPT
@@ -266,20 +266,19 @@ echo "<M> DNAT + firewall configurato su GWS."
 
 ## 🔹 Tabella di test
 
-| #  | Descrizione                                                     | Nodo di partenza | Comando                                    | Risultato atteso                              |
-| -- | --------------------------------------------------------------- | ---------------- | ------------------------------------------ | --------------------------------------------- |
-| 1  | Connettività Client → GWC                                       | Client           | `ping -c 3 192.168.100.1`                  | Risponde (ICMP OK)                            |
-| 2  | Connettività Client → GWS (indirizzo sulla rete esterna di GWS) | Client           | `ping -c 3 <IP_pubblico_GWS>`              | Risponde (ICMP OK)                            |
-| 3  | DHCP: il Client riceve IP                                       | Client           | `dhclient eth0` oppure `ip addr show eth0` | Ottiene IP in `192.168.100.0/24`, gateway GWC |
-| 4  | SNAT da Client verso GWS                                        | Client           | `ping -c 3 <IP_pubblico_GWS>`              | Risponde, sorgente tradotta da GWC            |
-| 5  | DNAT HTTP Client → WebSrv                                       | Client           | `nc -vz <IP_pubblico_GWS> 80`              | Connessione riuscita verso WebSrv             |
-| 6  | DNAT SMTP Client → MailSrv                                      | Client           | `nc -vz <IP_pubblico_GWS> 25`              | Connessione riuscita verso MailSrv            |
-| 7  | Firewall WebSrv (solo HTTP + ICMP)                              | Client           | `nc -vz <IP_privato_WebSrv> 22`            | Connessione **rifiutata** (blocco firewall)   |
-| 8  | Firewall MailSrv (solo SMTP + ICMP)                             | Client           | `nc -vz <IP_privato_MailSrv> 80`           | Connessione **rifiutata** (blocco firewall)   |
-| 9  | ICMP WebSrv                                                     | Client           | `ping -c 3 <IP_privato_WebSrv>`            | Risponde                                      |
-| 10 | ICMP MailSrv                                                    | Client           | `ping -c 3 <IP_privato_MailSrv>`           | Risponde                                      |
-| 11 | VLAN isolation tra reti diverse                                 | Client           | `arping -c 3 <IP_privato_WebSrv>`          | Nessuna risposta (ARP bloccato da VLAN)       |
-| 12 | VLAN isolation tra reti diverse                                 | WebSrv           | `arping -c 3 <IP_privato_Client>`          | Nessuna risposta                              |
-| 13 | Test UDP non consentito (es. su HTTP)                           | Client           | `nc -vu <IP_pubblico_GWS> 80`              | Nessuna risposta (blocco firewall UDP)        |
-| 14 | Test UDP non consentito (SMTP)                                  | Client           | `nc -vu <IP_pubblico_GWS> 25`              | Nessuna risposta (blocco firewall UDP)        |
-
+| #   | Descrizione                                                     | Nodo di partenza | Comando                                    | Risultato atteso                              |
+| --- | --------------------------------------------------------------- | ---------------- | ------------------------------------------ | --------------------------------------------- |
+| 1   | Connettività Client → GWC                                       | Client           | `ping -c 3 192.168.100.1`                  | Risponde (ICMP OK)                            |
+| 2   | Connettività Client → GWS (indirizzo sulla rete esterna di GWS) | Client           | `ping -c 3 <IP_pubblico_GWS>`              | Risponde (ICMP OK)                            |
+| 3   | DHCP: il Client riceve IP                                       | Client           | `dhclient eth0` oppure `ip addr show eth0` | Ottiene IP in `192.168.100.0/24`, gateway GWC |
+| 4   | SNAT da Client verso GWS                                        | Client           | `ping -c 3 <IP_pubblico_GWS>`              | Risponde, sorgente tradotta da GWC            |
+| 5   | DNAT HTTP Client → WebSrv                                       | Client           | `nc -vz <IP_pubblico_GWS> 80`              | Connessione riuscita verso WebSrv             |
+| 6   | DNAT SMTP Client → MailSrv                                      | Client           | `nc -vz <IP_pubblico_GWS> 25`              | Connessione riuscita verso MailSrv            |
+| 7   | Firewall WebSrv (solo HTTP + ICMP)                              | Client           | `nc -vz <IP_privato_WebSrv> 22`            | Connessione **rifiutata** (blocco firewall)   |
+| 8   | Firewall MailSrv (solo SMTP + ICMP)                             | Client           | `nc -vz <IP_privato_MailSrv> 80`           | Connessione **rifiutata** (blocco firewall)   |
+| 9   | ICMP WebSrv                                                     | Client           | `ping -c 3 <IP_privato_WebSrv>`            | Risponde                                      |
+| 10  | ICMP MailSrv                                                    | Client           | `ping -c 3 <IP_privato_MailSrv>`           | Risponde                                      |
+| 11  | VLAN isolation tra reti diverse                                 | Client           | `arping -c 3 <IP_privato_WebSrv>`          | Nessuna risposta (ARP bloccato da VLAN)       |
+| 12  | VLAN isolation tra reti diverse                                 | WebSrv           | `arping -c 3 <IP_privato_Client>`          | Nessuna risposta                              |
+| 13  | Test UDP non consentito (es. su HTTP)                           | Client           | `nc -vu <IP_pubblico_GWS> 80`              | Nessuna risposta (blocco firewall UDP)        |
+| 14  | Test UDP non consentito (SMTP)                                  | Client           | `nc -vu <IP_pubblico_GWS> 25`              | Nessuna risposta (blocco firewall UDP)        |
