@@ -188,10 +188,6 @@ iptables -F
 iptables -t nat -F
 iptables -X
 
-# Policy di default (blocco totale)
-iptables -t filter -P INPUT DROP
-iptables -t filter -P OUTPUT DROP
-iptables -t filter -P FORWARD DROP
 
 #------------------------------------------------
 # DHCP LAN
@@ -239,6 +235,12 @@ iptables -t filter -A OUTPUT -p icmp -j ACCEPT
 #------------------------------------------------
 iptables -A INPUT  -i eth0.42 -p tcp -s 10.42.0.1 --dport 22 -m state --state NEW -j ACCEPT
 iptables -A OUTPUT -o eth0.42 -p tcp -d 10.42.0.1 --sport 22 -m state --state ESTABLISHED -j ACCEPT
+
+# Policy di default (blocco totale)
+iptables -t filter -P INPUT DROP
+iptables -t filter -P OUTPUT DROP
+iptables -t filter -P FORWARD DROP
+
 
 echo "<M> DNAT + firewall configurato su GW."
 ```
