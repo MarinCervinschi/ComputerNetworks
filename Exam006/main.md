@@ -183,58 +183,62 @@ fi
 ```bash
 #!/bin/bash
 
-# Interfacce
-PUB_IF=eth0        # lato VLAN
-DHCP_LAN=eth0.42   # VLAN 42
-LAN_SRV=eth0.43    # VLAN server
-EXT_IF=eth1        # lato EXT
-EXT=2.20.20.20
-SRV_IP=10.42.0.129
-VLAN_1_IP=10.42.0.0/25
-H1_IP=10.42.0.1
-H2_IP=10.42.0.2
-
-# Flush
+# Pulizia regole esistenti
 iptables -F
 iptables -t nat -F
 iptables -X
 
-# Policy default (negazione implicita)
-iptables -P INPUT DROP
-iptables -P FORWARD DROP
-iptables -P OUTPUT DROP
+# Policy di default (blocco totale)
+iptables -t filter -P INPUT DROP
+iptables -t filter -P OUTPUT DROP
+iptables -t filter -P FORWARD DROP
 
-# ICMP ovunque
-iptables -A INPUT   -p icmp -j ACCEPT
-iptables -A OUTPUT  -p icmp -j ACCEPT
-iptables -A FORWARD -p icmp -j ACCEPT
-
-# NAT verso Internet
-iptables -t nat -A POSTROUTING -o $EXT_IF -j MASQUERADE
-
-# DHCP tra VLAN42 e GW
-iptables -A INPUT  -i $DHCP_LAN -p udp --sport 67 --dport 68 -m state --state ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -o $DHCP_LAN -p udp --sport 68 --dport 67 -m state --state NEW,ESTABLISHED -j ACCEPT
-
-# HTTP VLAN42 → SRV
-iptables -A FORWARD -i $DHCP_LAN -o $LAN_SRV -s $VLAN_1_IP -d $SRV_IP -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -i $LAN_SRV -o $DHCP_LAN -s $SRV_IP -d $VLAN_1_IP -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-
-# SSH H1 → GW
-iptables -A INPUT  -i $DHCP_LAN -p tcp -s $H1_IP --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -o $DHCP_LAN -p tcp -d $H1_IP --sport 22 -m state --state ESTABLISHED -j ACCEPT
-
-# LAN → EXT (HTTP)
-iptables -A FORWARD -i $DHCP_LAN -o $EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -i $EXT_IF -o $DHCP_LAN -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-iptables -A FORWARD -i $LAN_SRV  -o $EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -i $EXT_IF   -o $LAN_SRV -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-
-# EXT → SRV (HTTP) tramite DNAT
-iptables -t nat -A PREROUTING -i $EXT_IF -p tcp --dport 80 -j DNAT --to-destination $SRV_IP:80
-iptables -A FORWARD -i $EXT_IF -o $LAN_SRV -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -o $EXT_IF -i $LAN_SRV -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-
+#------------------------------------------------
+# DHCP LAN
+#------------------------------------------------
+iptables -A INPUT  -i eth0.42 -p udp --sport 67 --dport 68 -j ACCEPT
+iptables -A OUTPUT -o eth0.42 -p udp --sport 68 --dport 67 -j ACCEPT
+#------------------------------------------------
+# DNS LAN
+#------------------------------------------------
+iptables -A INPUT  -i eth0.42 -p udp -s 10.42.0.0/25 --dport 53 -j ACCEPT
+iptables -A OUTPUT -o eth0.42 -p udp -d 10.42.0.0/25 --sport 53 -j ACCEPT
+#-------------------------------------------
+# NAT: Masquerading per traffico in uscita
+#-------------------------------------------
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+#---------------------------------------------
+# H1, H2 -> SRV
+#---------------------------------------------
+iptables -A FORWARD -i eth0.42 -o eth0.43 -p tcp -s 10.42.0.0/25 -d 10.42.0.129 --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth0.43 -o eth0.42 -p tcp -s 10.42.0.129 -d 10.42.0.0/25 --sport 80 -m state --state ESTABLISHED -j ACCEPT
+#------------------------------------------------
+# H1, H2 -> EXT HTTP (porta 80)
+#------------------------------------------------
+iptables -A FORWARD -i eth0.42 -o eth1 -p tcp -s 10.42.0.0/25 -d 2.20.20.20 --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0.42 -p tcp -s 2.20.20.20 -d 10.42.0.0/25 --sport 80 -m state --state ESTABLISHED -j ACCEPT
+#------------------------------------------------
+# SRV -> EXT HTTP (porta 80)
+#------------------------------------------------
+iptables -A FORWARD -i eth0.43 -o eth1 -p tcp -s 10.42.0.129 -d 2.20.20.20 --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0.43 -p tcp -s 2.20.20.20 -d 10.42.0.129 --sport 80 -m state --state ESTABLISHED -j ACCEPT
+#------------------------------------------------
+# EXT -> SRV (porta 80)
+#------------------------------------------------
+iptables -t nat -A PREROUTING -p tcp --dport 80 -i eth1 -s 2.20.20.20 -d 2.2.2.42 -j DNAT --to-destination 10.42.0.129
+iptables -A FORWARD -i eth1 -o eth0.43 -p tcp -s 2.20.20.20 -d 10.42.0.129 --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth0.43 -o eth1 -p tcp -s 10.42.0.129 -d 2.20.20.20 --sport 80 -m state --state ESTABLISHED -j ACCEPT
+#------------------------------------------------
+#ICMP
+#------------------------------------------------
+iptables -t filter -A INPUT -p icmp -j ACCEPT
+iptables -t filter -A FORWARD -p icmp -j ACCEPT
+iptables -t filter -A OUTPUT -p icmp -j ACCEPT
+#------------------------------------------------
+# SSH da H1 → GW
+#------------------------------------------------
+iptables -A INPUT  -i eth0.42 -p tcp -s 10.42.0.1 --dport 22 -m state --state NEW -j ACCEPT
+iptables -A OUTPUT -o eth0.42 -p tcp -d 10.42.0.1 --sport 22 -m state --state ESTABLISHED -j ACCEPT
 
 echo "<M> DNAT + firewall configurato su GW."
 ```
