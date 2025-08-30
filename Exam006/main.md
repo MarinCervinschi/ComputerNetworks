@@ -88,7 +88,7 @@ echo "$interfaces" >> /etc/network/interfaces
 echo "<M> EXT network configuration added."
 ```
 
-### GWC
+### GW
 
 ```bash
 #!/bin/bash
@@ -121,12 +121,15 @@ expand-hosts
 domain=local
 
 interface=eth0.42
-dhcp-option=3,10.42.0.0  #server DHCP - IP della sua VLAN
-dhcp-option=6,10.42.0.0  #server DNS
+dhcp-option=3,10.42.0.126  #server DHCP - IP della sua VLAN
+dhcp-option=6,10.42.0.126  #server DNS
 
 #devo assegnare a H1 e H2 sempre lo stesso indirizzo (ip addr show eth0 - MAC)
 dhcp-host=02:04:06:11:11:11,H1,10.42.0.1
 dhcp-host=02:04:06:22:22:22,H2,10.42.0.2
+
+# syntax -> dhcp-range=<start_IP>,<end_IP>,<netmask>,<lease_time>
+dhcp-range=10.42.0.1,10.42.0.253,255.255.255.128,12h
 "
 
 echo "$dnsmasq" >> /etc/dnsmasq.conf
@@ -170,13 +173,13 @@ fi
 
 ```
 
+> **⚠️🚨** RICORDA DI SOSTITUIRE I MAC GIUSTI  
 > **⚠️🚨** Ricordiamo di tirare su tutte le interfacce con `ifup -a` (prima il `GW`)
 
-> **⚠️🚨** Ricordiamo di tirare su tutte le interfacce con `ifup -a` (prima il `GW`)
 
-## GWS DNAT
+## Firewall e NAT
 
-> ‼️ Configurazioni da lanciare in `GWS`
+> ‼️ Configurazioni da lanciare in `GW`
 
 ```bash
 #!/bin/bash
@@ -243,5 +246,5 @@ iptables -t filter -A FORWARD -i $EXT_IF -o $LAN_SRV -p tcp --dport 80 -m state 
 iptables -t filter -A FORWARD -o $EXT_IF -i $LAN_SRV -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
 
-echo "<M> DNAT + firewall configurato su GWS."
+echo "<M> DNAT + firewall configurato su GW."
 ```
