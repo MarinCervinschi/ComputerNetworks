@@ -184,56 +184,57 @@ fi
 #!/bin/bash
 
 # Interfacce
-GW_LAN_42_IF=eth0.42
-GW_LAN_43_IF=eth0.43
-GW_GW_EXT_IF=eth1
-
-# IP
+PUB_IF=eth0        # lato VLAN
+DHCP_LAN=eth0.42   # VLAN 42
+LAN_SRV=eth0.43    # VLAN server
+EXT_IF=eth1        # lato EXT
+EXT=2.20.20.20
 SRV_IP=10.42.0.129
-VLAN_42_IP=10.42.0.0/25
+VLAN_1_IP=10.42.0.0/25
 H1_IP=10.42.0.1
+H2_IP=10.42.0.2
 
-# Flush delle regole esistenti
+# Flush
 iptables -F
 iptables -t nat -F
 iptables -X
 
-# Policy di default (negazione implicita)
+# Policy default (negazione implicita)
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
 
-# 8. Consentire traffico ICMP ovunque
-iptables -A INPUT -p icmp -j ACCEPT
-iptables -A OUTPUT -p icmp -j ACCEPT
+# ICMP ovunque
+iptables -A INPUT   -p icmp -j ACCEPT
+iptables -A OUTPUT  -p icmp -j ACCEPT
 iptables -A FORWARD -p icmp -j ACCEPT
 
-# 2. DHCP per VLAN 42 (corretto sport/dport)
-iptables -A INPUT -i $GW_LAN_42_IF -p udp --dport 67 -j ACCEPT
-iptables -A OUTPUT -o $GW_LAN_42_IF -p udp --sport 67 -j ACCEPT
+# NAT verso Internet
+iptables -t nat -A POSTROUTING -o $EXT_IF -j MASQUERADE
 
-# 3. NAT per l'accesso a Internet
-iptables -t nat -A POSTROUTING -o $GW_EXT_IF -j MASQUERADE
+# DHCP tra VLAN42 e GW
+iptables -A INPUT  -i $DHCP_LAN -p udp --sport 67 --dport 68 -m state --state ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -o $DHCP_LAN -p udp --sport 68 --dport 67 -m state --state NEW,ESTABLISHED -j ACCEPT
 
-# 4. HTTP dalla sottorete 10.42.0.0/25 verso SRV
-iptables -A FORWARD -s $VLAN_42_IP -d $SRV_IP -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -d $VLAN_42_IP -s $SRV_IP -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
+# HTTP VLAN42 → SRV
+iptables -A FORWARD -i $DHCP_LAN -o $LAN_SRV -s $VLAN_1_IP -d $SRV_IP -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i $LAN_SRV -o $DHCP_LAN -s $SRV_IP -d $VLAN_1_IP -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
-# 5. SSH da H1 verso GW
-iptables -A INPUT -i $GW_LAN_42_IF -s $H1_IP -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A OUTPUT -o $GW_LAN_42_IF -d $H1_IP -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
+# SSH H1 → GW
+iptables -A INPUT  -i $DHCP_LAN -p tcp -s $H1_IP --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -o $DHCP_LAN -p tcp -d $H1_IP --sport 22 -m state --state ESTABLISHED -j ACCEPT
 
-# 6. Accesso a server Web esterno dalla LAN
-iptables -A FORWARD -i $GW_LAN_42_IF -o $GW_EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -i $GW_EXT_IF -o $GW_LAN_42_IF -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
+# LAN → EXT (HTTP)
+iptables -A FORWARD -i $DHCP_LAN -o $EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i $EXT_IF -o $DHCP_LAN -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i $LAN_SRV  -o $EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i $EXT_IF   -o $LAN_SRV -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
-# 7. Accesso da EXT al server Web su SRV (DNAT)
-iptables -t nat -A PREROUTING -i $GW_EXT_IF -p tcp --dport 80 -j DNAT --to $SRV_IP
-iptables -A FORWARD -i $GW_EXT_IF -o $GW_LAN_43_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -i $GW_LAN_43_IF -o $GW_EXT_IF -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
+# EXT → SRV (HTTP) tramite DNAT
+iptables -t nat -A PREROUTING -i $EXT_IF -p tcp --dport 80 -j DNAT --to-destination $SRV_IP:80
+iptables -A FORWARD -i $EXT_IF -o $LAN_SRV -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -o $EXT_IF -i $LAN_SRV -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
-# Regole aggiuntive per traffico generico
-iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 echo "<M> DNAT + firewall configurato su GW."
 ```
