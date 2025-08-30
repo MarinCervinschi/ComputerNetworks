@@ -129,7 +129,7 @@ dhcp-host=02:04:06:11:11:11,H1,10.42.0.1
 dhcp-host=02:04:06:22:22:22,H2,10.42.0.2
 
 # syntax -> dhcp-range=<start_IP>,<end_IP>,<netmask>,<lease_time>
-dhcp-range=10.42.0.1,10.42.0.253,255.255.255.128,12h
+dhcp-range=10.42.0.3,10.42.0.125,255.255.255.128,12h
 "
 
 echo "$dnsmasq" >> /etc/dnsmasq.conf
