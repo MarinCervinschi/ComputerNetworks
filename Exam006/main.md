@@ -80,7 +80,7 @@ auto eth0
 iface eth0 inet static
         address 2.20.20.20
         netmask 255.255.255.255
-        gateway 2.2.2.2
+        gateway 2.2.2.42
         hostname EXT
 "
 
@@ -106,7 +106,7 @@ iface eth0.43 inet static
 
 auto eth1
 iface eth1 inet static
-        address 2.2.2.2
+        address 2.2.2.42
         netmask 255.255.255.255
 
 post-up ip route add 2.20.20.20/32 dev eth1
@@ -176,7 +176,6 @@ fi
 > **⚠️🚨** RICORDA DI SOSTITUIRE I MAC GIUSTI  
 > **⚠️🚨** Ricordiamo di tirare su tutte le interfacce con `ifup -a` (prima il `GW`)
 
-
 ## Firewall e NAT
 
 > ‼️ Configurazioni da lanciare in `GW`
@@ -185,66 +184,56 @@ fi
 #!/bin/bash
 
 # Interfacce
-PUB_IF=eth0  # lato VLAN
-DHCP_LAN=eth0.42
-LAN_SRV=eth0.43
-EXT_IF=eth1   # lato EXT
-EXT=2.20.20.20
-SRV_IP=10.42.0.129
-VLAN_1_IP=10.42.0.0/25
-H1_IP=10.42.0.1
-H2_IP=10.42.0.2
+GW_LAN_42_IF=eth0.42
+GW_LAN_43_IF=eth0.43
+GW_GW_EXT_IF=eth1
 
-# Flush
+# IP
+SRV_IP=10.42.0.129
+VLAN_42_IP=10.42.0.0/25
+H1_IP=10.42.0.1
+
+# Flush delle regole esistenti
 iptables -F
 iptables -t nat -F
 iptables -X
 
-# Policy default
+# Policy di default (negazione implicita)
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT DROP
 
-# ICMP ovunque
-iptables -A INPUT   -p icmp -j ACCEPT
-iptables -A OUTPUT  -p icmp -j ACCEPT
+# 8. Consentire traffico ICMP ovunque
+iptables -A INPUT -p icmp -j ACCEPT
+iptables -A OUTPUT -p icmp -j ACCEPT
 iptables -A FORWARD -p icmp -j ACCEPT
 
+# 2. DHCP per VLAN 42 (corretto sport/dport)
+iptables -A INPUT -i $GW_LAN_42_IF -p udp --dport 67 -j ACCEPT
+iptables -A OUTPUT -o $GW_LAN_42_IF -p udp --sport 67 -j ACCEPT
 
-# Configuro il SNAT
-# -t nat -> significa "table nat", ovvero la tabella NAT
-# -A POSTROUTING -> aggiunge una regola nella catena POSTROUTING
-# -o <INTERFACE> -> specifica l'interfaccia di uscita
-# -j MASQUERADE -> applica la regola di masquerading
+# 3. NAT per l'accesso a Internet
+iptables -t nat -A POSTROUTING -o $GW_EXT_IF -j MASQUERADE
 
-iptables -t nat -A POSTROUTING -o $EXT_IF -j MASQUERADE
+# 4. HTTP dalla sottorete 10.42.0.0/25 verso SRV
+iptables -A FORWARD -s $VLAN_42_IP -d $SRV_IP -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -d $VLAN_42_IP -s $SRV_IP -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
-iptables -A INPUT -i $DHCP_LAN -p udp --sport 67 --dport 68 -j ACCEPT
-iptables -A OUTPUT -o $DHCP_LAN -p udp --sport 68 --dport 67 -j ACCEPT
+# 5. SSH da H1 verso GW
+iptables -A INPUT -i $GW_LAN_42_IF -s $H1_IP -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -o $GW_LAN_42_IF -d $H1_IP -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
 
+# 6. Accesso a server Web esterno dalla LAN
+iptables -A FORWARD -i $GW_LAN_42_IF -o $GW_EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i $GW_EXT_IF -o $GW_LAN_42_IF -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
-iptables -t filter -A FORWARD -i $DHCP_LAN -o $LAN_SRV -s $VLAN_1_IP -d $SRV_IP -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -t filter -A FORWARD -i $LAN_SRV -o $DHCP_LAN -s $SRV_IP -d $VLAN_1_IP -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
+# 7. Accesso da EXT al server Web su SRV (DNAT)
+iptables -t nat -A PREROUTING -i $GW_EXT_IF -p tcp --dport 80 -j DNAT --to $SRV_IP
+iptables -A FORWARD -i $GW_EXT_IF -o $GW_LAN_43_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i $GW_LAN_43_IF -o $GW_EXT_IF -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
 
-# SSH
-# Consentire connessioni SSH in ingresso dalla LAN
-iptables -A INPUT -i $DHCP_LAN -p tcp -s $H1_IP --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
-
-# Consentire risposte SSH in uscita verso il client
-iptables -A OUTPUT -o $DHCP_LAN -p tcp -d $H1_IP --sport 22 -m state --state ESTABLISHED -j ACCEPT
-
-
-# Lan to EXT
-iptables -t filter -A FORWARD -i $DHCP_LAN -o $EXT_IF -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -t filter -A FORWARD -i $EXT_IF -o $DHCP_LAN -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-
-# From EXT to SRV
-# DNAT
-iptables -t nat -A PREROUTING -i $EXT_IF -p tcp --dport 80 -j DNAT --to-destination $SRV_IP:80
-
-iptables -t filter -A FORWARD -i $EXT_IF -o $LAN_SRV -p tcp --dport 80 -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -t filter -A FORWARD -o $EXT_IF -i $LAN_SRV -p tcp --sport 80 -m state --state ESTABLISHED -j ACCEPT
-
+# Regole aggiuntive per traffico generico
+iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 echo "<M> DNAT + firewall configurato su GW."
 ```
