@@ -1,0 +1,325 @@
+tests:
+    H1_ETH0_DHCP:
+      host: H1
+      command: grep -qE '^iface eth0 inet dhcp' /etc/network/interfaces > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: True
+
+    H1_ETH0_CONF:
+      host: H1
+      command: ip -o -4 addr show dev eth0 | awk '{print \$4}' | cut -d/ -f1
+      expected: 10.42.0.0/25
+      store_as_variable: H1_ETH0_IP
+      stop_on_error: True
+
+    H2_ETH0_DHCP:
+      host: H2
+      command: grep -qE '^iface eth0 inet dhcp' /etc/network/interfaces > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: True
+
+    H1_ETH0_CONF:
+      host: H2
+      command: ip -o -4 addr show dev eth0 | awk '{print \$4}' | cut -d/ -f1
+      expected: 10.42.0.0/25
+      store_as_variable: H2_ETH0_IP
+      stop_on_error: True
+
+    SRV_ETH0_CONF:
+      host: SRV
+      command: ip -o -4 addr show dev eth0 | awk '{print \$4}' | cut -d/ -f1
+      expected: 10.42.0.129
+      store_as_variable: SRV_ETH0_IP
+      stop_on_error: True
+
+    SRV_ETH0_STATIC:
+      host: SRV
+      command: grep -A 2 '^iface eth0' /etc/network/interfaces | grep "address" | awk '{print \$2}'| cut -d'/' -f1
+      expected: 10.42.0.129
+      stop_on_error: True
+
+    GW_ETH0.42_STATIC:
+      host: GW
+      command: grep -A 2 '^iface eth0.42' /etc/network/interfaces | grep "address" | awk '{print \$2}'| cut -d'/' -f1
+      expected: 10.42.0.126
+      stop_on_error: True
+
+    GW_ETH0.42_CONF:
+      host: GW
+      command: ip -o -4 addr show dev eth0.42 | awk '{print \$4}' | cut -d/ -f1
+      expected: 10.42.0.126
+      store_as_variable: GW_ETH0.42_IP
+      stop_on_error: True
+
+    GW_ETH0.43_STATIC:
+      host: GW
+      command: grep -A 2 '^iface eth0.43' /etc/network/interfaces | grep "address" | awk '{print \$2}'| cut -d'/' -f1
+      expected: 10.42.0.254
+      stop_on_error: True
+
+    GW_ETH0.43_CONF:
+      host: GW
+      command: ip -o -4 addr show dev eth0.43 | awk '{print \$4}' | cut -d/ -f1
+      expected: 10.42.0.254
+      store_as_variable: GW_ETH0.43_IP
+      stop_on_error: True
+
+    GW_ETH1_STATIC:
+      host: GW
+      command: grep -A 2 '^iface eth1' /etc/network/interfaces | grep "address" | awk '{print \$2}'| cut -d'/' -f1
+      expected: 2.2.2.42
+      stop_on_error: True
+
+    GW_ETH1_CONF:
+      host: GW
+      command: ip -o -4 addr show dev eth1 | awk '{print \$4}' | cut -d/ -f1
+      expected: 2.2.2.42
+      store_as_variable: GW_ETH1_IP
+      stop_on_error: True
+
+    EXT_ETH0_STATIC:
+      host: EXT
+      command: grep -A 2 '^iface eth0' /etc/network/interfaces | grep "address" | awk '{print \$2}'| cut -d'/' -f1
+      expected: 2.20.20.20
+      stop_on_error: True
+
+    EXT_ETH0_CONF:
+      host: EXT
+      command: ip -o -4 addr show dev eth0 | awk '{print \$4}' | cut -d/ -f1
+      expected: 2.20.20.20
+      store_as_variable: EXT_ETH0_IP
+      stop_on_error: True
+
+    check_configuration:
+      type: check
+
+    ## ROUTING CHECKS
+    GW_IP_FORWARD:
+      host: GW
+      command: sysctl net.ipv4.ip_forward | cut -d ' ' -f3
+      expected: '1'
+      stop_on_error: False
+    
+    GW_ROUTING_RULE:
+      host: GW
+      command: ip route show dev eth1 | cut -d ' ' -f1
+      expected: 2.20.20.20
+      stop_on_error: False
+
+    EXT_ROUTING_RUL:
+      host: EXT
+      command: ip route show dev eth0 | cut -d ' ' -f1
+      expected: 2.2.2.42
+      stop_on_error: False
+
+    H1_DEFAULT_GW:
+      host: H1
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 10.42.0.126
+      stop_on_error: True
+    
+    H2_DEFAULT_GW:
+      host: H2
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 10.42.0.126
+      stop_on_error: True
+
+    SRV_DEFAULT_GW:
+      host: SRV
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 10.42.0.254
+      stop_on_error: True
+
+    PING_H1_TO_H2:
+      host: H1
+      command: ping -c 1 @H2_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_H1_TO_SRV:
+      host: H1
+      command: ping -c 1 @SRV_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_H2_TO_SRV:
+      host: H2
+      command: ping -c 1 @SRV_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    ARPING_H1_TO_H2:
+      host: H1
+      command: arping -i eth0 -c 1 @H2_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    ARPING_H1_TO_SRV:
+      host: H1
+      command: arping -i eth0 -c 1 @SRV_ETH0_IP > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+    
+    ARPING_H2_TO_SRV:
+      host: H2
+      command: arping -i eth0 -c 1 @SRV_ETH0_IP > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    PING_H1_TO_GW:
+      host: H1
+      command: ping -c 1 @GW_ETH0.42_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_H1_TO_EXT:
+      host: H1
+      command: ping -c 1 @EXT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_H2_TO_EXT:
+      host: H2
+      command: ping -c 1 @EXT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_SRV_TO_EXT:
+      host: SRV
+      command: ping -c 1 @EXT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_EXT_TO_GW:
+      host: EXT
+      command: ping -c 1 @GW_ETH1_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    ## FIREWALL AND NAT RULES
+    GW_INPUT_CHAIN:
+      host: GW
+      command: iptables -L INPUT -v -n | grep "Chain" | awk '{print \$4}'
+      expected: DROP
+      stop_on_error: False
+    
+    GW_OUTPUT_CHAIN:
+      host: GW
+      command: iptables -L OUTPUT -v -n | grep "Chain" | awk '{print \$4}'
+      expected: DROP
+      stop_on_error: False
+
+    GW_FORWARD_CHAIN:
+      host: GW
+      command: iptables -L FORWARD -v -n | grep "Chain" | awk '{print \$4}'
+      expected: DROP
+      stop_on_error: False
+
+    HTTP_H1_TO_SRV:
+      type: multi
+      list_of_commands:
+        - host: SRV
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: H1
+          command: echo test | nc @SRV_ETH0_IP 80 -w1 > /dev/null 2>&1 && echo PASS || echo FAIL
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SRV
+          command: pkill nc > /dev/null || true
+
+    HTTP_H1_TO_EXT:
+      type: multi
+      list_of_commands:
+        - host: EXT
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: H1
+          command: echo test | nc @EXT_ETH0_IP 80 -w1 > /dev/null 2>&1 && echo PASS || echo FAIL
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: EXT
+          command: pkill nc > /dev/null || true
+
+    GW_HTTP_DNAT_RULE:
+      type: multi
+      list_of_commands:
+        - host: SRV
+          command: nc -lp 8080 > /dev/null
+          background: True
+        - host: EXT
+          command: echo test | nc @GW_ETH1_IP 80 -w1 > /dev/null 2>&1 && echo FAIL || echo PASS
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SRV
+          command: pkill nc > /dev/null || true
+    
+    GW_HTTP_DNAT_RULE:
+      type: multi
+      list_of_commands:
+        - host: SRV
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: EXT
+          command: echo test | nc @GW_ETH1_IP 8080 -w1 > /dev/null 2>&1 && echo FAIL || echo PASS
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SRV
+          command: pkill nc > /dev/null || true
+
+    GW_HTTP_FORWARD_RULE:
+      type: multi
+      list_of_commands:
+        - host: EXT
+          command: nc -lp 8080 > /dev/null
+          background: True
+        - host: H1
+          command: echo test | nc @EXT_ETH0_IP 8080 -w1 > /dev/null 2>&1 && echo FAIL || echo PASS
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: EXT
+          command: pkill nc > /dev/null || true
+
+    HTTP_EXT_TO_SRV:
+      type: multi
+      list_of_commands:
+        - host: SRV
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: EXT
+          command: echo test | nc @GW_ETH1_IP 80 -w1 > /dev/null 2>&1 && echo PASS || echo FAIL
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SRV
+          command: pkill nc > /dev/null || true
+
+    SSH_H1_TO_GW:
+      host: H1
+      command: echo test | nc @GW_ETH0.42_IP 22 -w2 > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    SSH_H2_TO_GW:
+      host: H2
+      command: echo test | nc @GW_ETH0.42_IP 22 -w2 > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    SSH_SRV_TO_GW:
+      host: SRV
+      command: echo test | nc @GW_ETH0.42_IP 22 -w2 > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    ## LAST CHECKS - POTENTIAL INTERFACE MISCONFIGURATION
+    GW_DHCP_H1_RULE_CONF:
+      host: H1
+      command: ifdown eth0 2> /dev/null; ifup eth0 2>&1 | grep "leased" | awk '{print \$3}'
+      expected: 10.42.0.0/25
+      timeout: 5
