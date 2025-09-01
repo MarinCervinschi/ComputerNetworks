@@ -80,9 +80,9 @@ auto eth0
 iface eth0 inet static
         address 2.20.20.20
         netmask 255.255.255.255
-        gateway 2.2.2.42
         hostname EXT
         post-up ip route add 2.2.2.42/32 dev eth0
+        post-up ip route add default via 2.2.2.42 dev eth0
 "
 
 echo "$interfaces" >> /etc/network/interfaces
@@ -177,7 +177,18 @@ fi
 > **⚠️🚨** RICORDA DI SOSTITUIRE I MAC GIUSTI  
 > **⚠️🚨** Ricordiamo di tirare su tutte le interfacce con `ifup -a` (prima il `GW`)
 
-## Firewall e NAT
+## Regole di NAT e politiche di filtraggio sul firewall
+
+1. Utilizzare una **policy di negazione implicita** per tutti i pacchetti in transito, ingresso e uscita da GW
+2. Consentire flussi di comunicazione UDP per il corretto funzionamento del protocollo DHCP tra gli host della **VLAN 42** e **GW**
+3. Consentire a tutte le **macchine della rete interna** di accedere a macchine in **Internet** condividendo l’IP pubblico associato all’interfaccia eth1 di GW
+4. Consentire **connessioni HTTP** generate dalla **sottorete 10.42.0.0/25** verso il server web in esecuzione su **SRV** (testare con nc)
+5. Consentire **connessioni SSH** generate dalla macchina **H1** verso **GW**
+6. Consentire alle macchine della **rete LAN** di contattare un **server Web** in esecuzione su **EXT** (testare con nc)
+7. **EXT** possa contattare un **server Web** in esecuzione su **SRV** utilizzando l’IP pubblico associato all’interfaccia eth1 di GW (testare con nc)
+8. Consentire il **passaggio di traffico ICMP** tra tutti i nodi.
+
+### Firewall e NAT
 
 > ‼️ Configurazioni da lanciare in `GW`
 
@@ -189,8 +200,8 @@ GW_PUB_IF="eth1"
 SRV_IF="eth0.43"
 SRV_IP="10.42.0.129"
 H1_IP="10.42.0.1"
-DHCP_LAN_IP="10.42.0.0"
-SRV_LAN_IP="10.42.0.128"
+DHCP_LAN_NET="10.42.0.0/25"
+SRV_LAN_NET="10.42.0.128/25"
 EXT_IP="2.20.20.20"
 GW_IP="2.2.2.42"
 
@@ -208,15 +219,16 @@ iptables -A INPUT  -i $DHCP_IF -p udp --sport 68 --dport 67 -j ACCEPT
 iptables -A OUTPUT -o $DHCP_IF -p udp --sport 67 --dport 68 -j ACCEPT
 
 #-------------------------------------------
-# 3. NAT: Masquerading per traffico in uscita
+# 3. NAT: Masquerading per traffico in uscita (TUTTE le reti interne)
 #-------------------------------------------
-iptables -t nat -A POSTROUTING -o $GW_PUB_IF -j MASQUERADE
+iptables -t nat -A POSTROUTING -o $GW_PUB_IF -s $DHCP_LAN_NET -j MASQUERADE
+iptables -t nat -A POSTROUTING -o $GW_PUB_IF -s $SRV_LAN_NET -j MASQUERADE
 
 #---------------------------------------------
-# 4. H1, H2 -> SRV
+# 4. H1, H2 (sottorete 10.42.0.0/25) -> SRV
 #---------------------------------------------
-iptables -A FORWARD -p tcp --dport 80 -i $DHCP_IF -o $SRV_IF  -d $SRV_IP -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -p tcp --sport 80 -i $SRV_IF -o $DHCP_IF  -d $SRV_IP -m state --state ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --dport 80 -i $DHCP_IF -o $SRV_IF -s $DHCP_LAN_NET -d $SRV_IP -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --sport 80 -i $SRV_IF -o $DHCP_IF -s $SRV_IP -d $DHCP_LAN_NET -m state --state ESTABLISHED -j ACCEPT
 
 #------------------------------------------------
 # 5. SSH da H1 → GW
@@ -225,28 +237,27 @@ iptables -A INPUT  -p tcp --dport 22 -i $DHCP_IF -s $H1_IP  -m state --state NEW
 iptables -A OUTPUT -p tcp --sport 22 -o $DHCP_IF -d $H1_IP  -m state --state ESTABLISHED -j ACCEPT
 
 #------------------------------------------------
-# 6. H1, H2 -> EXT HTTP (porta 80)
+# 6. Reti LAN (DHCP+SRV) -> EXT HTTP (porta 80)
 #------------------------------------------------
-iptables -A FORWARD -p tcp --dport 80 -i $DHCP_IF -o $GW_PUB_IF -s $DHCP_LAN_IP -d $EXT_IP -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -p tcp --sport 80 -i $GW_PUB_IF -o $DHCP_IF -s $EXT_IP -d $DHCP_LAN_IP -m state --state ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --dport 80 -i $DHCP_IF -o $GW_PUB_IF -s $DHCP_LAN_NET -d $EXT_IP -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --sport 80 -i $GW_PUB_IF -o $DHCP_IF -s $EXT_IP -d $DHCP_LAN_NET -m state --state ESTABLISHED -j ACCEPT
+
+iptables -A FORWARD -p tcp --dport 80 -i $SRV_IF -o $GW_PUB_IF -s $SRV_LAN_NET -d $EXT_IP -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --sport 80 -i $GW_PUB_IF -o $SRV_IF -s $EXT_IP -d $SRV_LAN_NET -m state --state ESTABLISHED -j ACCEPT
+
 #------------------------------------------------
-# 6. SRV -> EXT HTTP (porta 80)
-#------------------------------------------------
-iptables -A FORWARD -p tcp --dport 80 -i $SRV_IF -o $GW_PUB_IF -s $SRV_LAN_IP -d $EXT_IP -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -p tcp --sport 80 -i $GW_PUB_IF -o $SRV_IF -s $EXT_IP -d $SRV_LAN_IP -m state --state ESTABLISHED -j ACCEPT
-#------------------------------------------------
-# 7. EXT -> SRV (porta 80)
+# 7. EXT -> SRV (via IP pubblico di GW)
 #------------------------------------------------
 iptables -t nat -A PREROUTING -p tcp --dport 80 -i $GW_PUB_IF -s $EXT_IP -d $GW_IP -j DNAT --to-destination $SRV_IP
-iptables -A FORWARD -p tcp --dport 80 -i $GW_PUB_IF -o $SRV_IF -d $SRV_IP -m state --state NEW,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -p tcp --sport 80 -i $SRV_IF -o $GW_PUB_IF -s $SRV_IP -m state --state ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --dport 80 -i $GW_PUB_IF -o $SRV_IF -s $EXT_IP -d $SRV_IP -m state --state NEW,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -p tcp --sport 80 -i $SRV_IF -o $GW_PUB_IF -s $SRV_IP -d $EXT_IP -m state --state ESTABLISHED -j ACCEPT
 
 #------------------------------------------------
 # 8. ICMP
 #------------------------------------------------
-iptables -t filter -A INPUT -p icmp -j ACCEPT
-iptables -t filter -A FORWARD -p icmp -j ACCEPT
-iptables -t filter -A OUTPUT -p icmp -j ACCEPT
+iptables -A INPUT   -p icmp -j ACCEPT
+iptables -A FORWARD -p icmp -j ACCEPT
+iptables -A OUTPUT  -p icmp -j ACCEPT
 
 echo "<M> DNAT + firewall configurato su GW."
 ```
