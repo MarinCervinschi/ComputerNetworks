@@ -1,0 +1,334 @@
+tests:
+    # === CONFIGURAZIONE INTERFACCE ===
+    CLI1_ETH0_DHCP:
+      host: Cli1
+      command: grep -qE '^iface eth0 inet dhcp' /etc/network/interfaces > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: True
+
+    CLI1_ETH0_CONF:
+      host: Cli1
+      command: ip -o -4 addr show dev eth0 | awk '{print $4}' | cut -d/ -f1
+      expected: 192.168.20.0/24
+      store_as_variable: CLI1_ETH0_IP
+      stop_on_error: True
+
+    CLI2_ETH0_DHCP:
+      host: Cli2
+      command: grep -qE '^iface eth0 inet dhcp' /etc/network/interfaces > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: True
+
+    CLI2_ETH0_CONF:
+      host: Cli2
+      command: ip -o -4 addr show dev eth0 | awk '{print $4}' | cut -d/ -f1
+      expected: 192.168.20.0/24
+      store_as_variable: CLI2_ETH0_IP
+      stop_on_error: True
+
+    SRVEXT_ETH0_STATIC:
+      host: SrvExt
+      command: grep -A 2 '^iface eth0' /etc/network/interfaces | grep "address" | awk '{print $2}' | cut -d'/' -f1
+      expected: 155.185.48.1
+      stop_on_error: True
+
+    SRVEXT_ETH0_CONF:
+      host: SrvExt
+      command: ip -o -4 addr show dev eth0 | awk '{print $4}' | cut -d/ -f1
+      expected: 155.185.48.1
+      store_as_variable: SRVEXT_ETH0_IP
+      stop_on_error: True
+
+    SRVINT_ETH0_STATIC:
+      host: SrvInt
+      command: grep -A 2 '^iface eth0' /etc/network/interfaces | grep "address" | awk '{print $2}' | cut -d'/' -f1
+      expected: 192.168.30.1
+      stop_on_error: True
+
+    SRVINT_ETH0_CONF:
+      host: SrvInt
+      command: ip -o -4 addr show dev eth0 | awk '{print $4}' | cut -d/ -f1
+      expected: 192.168.30.1
+      store_as_variable: SRVINT_ETH0_IP
+      stop_on_error: True
+
+    # === CONFIGURAZIONE R1 (ROUTER) ===
+    R1_ETH0_10_STATIC:
+      host: R1
+      command: grep -A 2 '^iface eth0.10' /etc/network/interfaces | grep "address" | awk '{print $2}' | cut -d'/' -f1
+      expected: 155.185.48.254
+      stop_on_error: True
+
+    R1_ETH0_10_CONF:
+      host: R1
+      command: ip -o -4 addr show dev eth0.10 | awk '{print $4}' | cut -d/ -f1
+      expected: 155.185.48.254
+      store_as_variable: R1_ETH0_10_IP
+      stop_on_error: True
+
+    R1_ETH0_20_STATIC:
+      host: R1
+      command: grep -A 2 '^iface eth0.20' /etc/network/interfaces | grep "address" | awk '{print $2}' | cut -d'/' -f1
+      expected: 192.168.20.254
+      stop_on_error: True
+
+    R1_ETH0_20_CONF:
+      host: R1
+      command: ip -o -4 addr show dev eth0.20 | awk '{print $4}' | cut -d/ -f1
+      expected: 192.168.20.254
+      store_as_variable: R1_ETH0_20_IP
+      stop_on_error: True
+
+    R1_ETH0_30_STATIC:
+      host: R1
+      command: grep -A 2 '^iface eth0.30' /etc/network/interfaces | grep "address" | awk '{print $2}' | cut -d'/' -f1
+      expected: 192.168.30.254
+      stop_on_error: True
+
+    R1_ETH0_30_CONF:
+      host: R1
+      command: ip -o -4 addr show dev eth0.30 | awk '{print $4}' | cut -d/ -f1
+      expected: 192.168.30.254
+      store_as_variable: R1_ETH0_30_IP
+      stop_on_error: True
+
+    check_configuration:
+      type: check
+
+    # === ROUTING CHECKS ===
+    R1_IP_FORWARD:
+      host: R1
+      command: sysctl net.ipv4.ip_forward | cut -d ' ' -f3
+      expected: '1'
+      stop_on_error: False
+
+    CLI1_DEFAULT_GW:
+      host: Cli1
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 192.168.20.254
+      stop_on_error: True
+
+    CLI2_DEFAULT_GW:
+      host: Cli2
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 192.168.20.254
+      stop_on_error: True
+
+    SRVEXT_DEFAULT_GW:
+      host: SrvExt
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 155.185.48.254
+      stop_on_error: True
+
+    SRVINT_DEFAULT_GW:
+      host: SrvInt
+      command: ip route show | grep '^default' | cut -d ' ' -f3
+      expected: 192.168.30.254
+      stop_on_error: True
+
+    # === DHCP FUNCTIONALITY ===
+    DHCP_CLI1_LEASE:
+      host: Cli1
+      command: ifdown eth0 2> /dev/null; ifup eth0 2>&1 | grep "leased" | awk '{print $3}'
+      expected: 192.168.20.0/24
+      timeout: 10
+
+    DHCP_CLI2_LEASE:
+      host: Cli2
+      command: ifdown eth0 2> /dev/null; ifup eth0 2>&1 | grep "leased" | awk '{print $3}'
+      expected: 192.168.20.0/24
+      timeout: 10
+
+    # === CONNECTIVITY TESTS ===
+    PING_CLI1_TO_R1:
+      host: Cli1
+      command: ping -c 1 @R1_ETH0_20_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_CLI2_TO_R1:
+      host: Cli2
+      command: ping -c 1 @R1_ETH0_20_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_SRVEXT_TO_R1:
+      host: SrvExt
+      command: ping -c 1 @R1_ETH0_10_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_SRVINT_TO_R1:
+      host: SrvInt
+      command: ping -c 1 @R1_ETH0_30_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    # === VLAN SEPARATION TESTS (ARPING) ===
+    ARPING_CLI1_TO_SRVEXT:
+      host: Cli1
+      command: arping -i eth0 -c 1 @SRVEXT_ETH0_IP > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    ARPING_CLI1_TO_SRVINT:
+      host: Cli1
+      command: arping -i eth0 -c 1 @SRVINT_ETH0_IP > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    ARPING_SRVEXT_TO_CLI1:
+      host: SrvExt
+      command: arping -i eth0 -c 1 @CLI1_ETH0_IP > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    ARPING_SRVEXT_TO_SRVINT:
+      host: SrvExt
+      command: arping -i eth0 -c 1 @SRVINT_ETH0_IP > /dev/null 2>&1 && echo FAIL || echo PASS
+      expected: PASS
+      stop_on_error: False
+
+    # === INTER-VLAN CONNECTIVITY (WITH ROUTING) ===
+    PING_CLI1_TO_SRVEXT:
+      host: Cli1
+      command: ping -c 1 @SRVEXT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_CLI2_TO_SRVEXT:
+      host: Cli2
+      command: ping -c 1 @SRVEXT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_CLI1_TO_SRVINT:
+      host: Cli1
+      command: ping -c 1 @SRVINT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    PING_CLI2_TO_SRVINT:
+      host: Cli2
+      command: ping -c 1 @SRVINT_ETH0_IP > /dev/null 2>&1 && echo PASS || echo FAIL
+      expected: PASS
+      stop_on_error: False
+
+    # === NAT FUNCTIONALITY TESTS ===
+    R1_NAT_POSTROUTING_RULES:
+      host: R1
+      command: iptables -t nat -L POSTROUTING -n | grep -c "MASQUERADE"
+      expected: '2'
+      stop_on_error: False
+
+    R1_NAT_PREROUTING_RULES:
+      host: R1
+      command: iptables -t nat -L PREROUTING -n | grep -c "DNAT"
+      expected: '2'
+      stop_on_error: False
+
+    # === DNAT TESTS (Port 8000 -> SrvInt:80) ===
+    DNAT_SRVEXT_TO_SRVINT:
+      type: multi
+      list_of_commands:
+        - host: SrvInt
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: SrvExt
+          command: echo test | nc @R1_ETH0_10_IP 8000 -w1 > /dev/null 2>&1 && echo PASS || echo FAIL
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SrvInt
+          command: pkill nc > /dev/null || true
+
+    DNAT_CLI1_TO_SRVINT:
+      type: multi
+      list_of_commands:
+        - host: SrvInt
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: Cli1
+          command: echo test | nc @R1_ETH0_20_IP 8000 -w1 > /dev/null 2>&1 && echo PASS || echo FAIL
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SrvInt
+          command: pkill nc > /dev/null || true
+
+    DNAT_CLI2_TO_SRVINT:
+      type: multi
+      list_of_commands:
+        - host: SrvInt
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: Cli2
+          command: echo test | nc @R1_ETH0_20_IP 8000 -w1 > /dev/null 2>&1 && echo PASS || echo FAIL
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SrvInt
+          command: pkill nc > /dev/null || true
+
+    # === DNAT NEGATIVE TEST (Direct Port 80 should fail) ===
+    DNAT_DIRECT_PORT80_FAIL:
+      type: multi
+      list_of_commands:
+        - host: SrvInt
+          command: nc -lp 80 > /dev/null
+          background: True
+        - host: SrvExt
+          command: echo test | nc @R1_ETH0_10_IP 80 -w1 > /dev/null 2>&1 && echo FAIL || echo PASS
+          expected: PASS
+          stop_on_error: False
+          evaluate: True
+        - host: SrvInt
+          command: pkill nc > /dev/null || true
+
+    # === SNAT VERIFICATION (CLI -> SRVEXT traffic analysis) ===
+    SNAT_CLI1_TO_SRVEXT_TCPDUMP:
+      type: multi
+      list_of_commands:
+        - host: SrvExt
+          command: timeout 5 tcpdump -i eth0 -n host @CLI1_ETH0_IP > /tmp/tcpdump_cli1.out 2>&1 || true
+          background: True
+        - host: Cli1
+          command: sleep 1; ping -c 1 @SRVEXT_ETH0_IP > /dev/null 2>&1 || true
+        - host: SrvExt
+          command: sleep 2; grep -c "@R1_ETH0_10_IP" /tmp/tcpdump_cli1.out 2>/dev/null || echo 0
+          expected: '0'
+          stop_on_error: False
+          evaluate: True
+
+    SNAT_CLI2_TO_SRVEXT_TCPDUMP:
+      type: multi
+      list_of_commands:
+        - host: SrvExt
+          command: timeout 5 tcpdump -i eth0 -n host @CLI2_ETH0_IP > /tmp/tcpdump_cli2.out 2>&1 || true
+          background: True
+        - host: Cli2
+          command: sleep 1; ping -c 1 @SRVEXT_ETH0_IP > /dev/null 2>&1 || true
+        - host: SrvExt
+          command: sleep 2; grep -c "@R1_ETH0_10_IP" /tmp/tcpdump_cli2.out 2>/dev/null || echo 0
+          expected: '0'
+          stop_on_error: False
+          evaluate: True
+
+    # === HOST ID VERIFICATION (Highest available HostID for R1) ===
+    R1_VLAN10_HOSTID:
+      host: R1
+      command: ip -o -4 addr show dev eth0.10 | awk '{print $4}' | cut -d'/' -f1 | cut -d'.' -f4
+      expected: '254'
+      stop_on_error: False
+
+    R1_VLAN20_HOSTID:
+      host: R1
+      command: ip -o -4 addr show dev eth0.20 | awk '{print $4}' | cut -d'/' -f1 | cut -d'.' -f4
+      expected: '254'
+      stop_on_error: False
+
+    R1_VLAN30_HOSTID:
+      host: R1
+      command: ip -o -4 addr show dev eth0.30 | awk '{print $4}' | cut -d'/' -f1 | cut -d'.' -f4
+      expected: '254'
+      stop_on_error: False
