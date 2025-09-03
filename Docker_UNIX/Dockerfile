@@ -13,6 +13,7 @@ RUN apt update && apt install -y \
     procps \
     dnsutils \
     netcat-openbsd \
+    tcpdump \
     && apt clean
 
 WORKDIR /workspace
