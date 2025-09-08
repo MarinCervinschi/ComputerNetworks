@@ -1,0 +1,193 @@
+country_code,coin_value,item_represented
+AD,2,Coat of arms of Andorra
+AD,1,Coat of arms of Andorra
+AD,0.50,Romanesque church of Santa Coloma
+AD,0.20,Romanesque church of Santa Coloma
+AD,0.10,Romanesque church of Santa Coloma
+AD,0.05,Pantheon of Casa de la Vall
+AD,0.02,Pantheon of Casa de la Vall
+AD,0.01,Pantheon of Casa de la Vall
+AT,2,Portrait of Bertha von Suttner
+AT,1,Portrait of Wolfgang Amadeus Mozart
+AT,0.50,Secession Building
+AT,0.20,Belvedere Palace
+AT,0.10,St. Stephen's Cathedral
+AT,0.05,Alpine primrose
+AT,0.02,Gentian flower
+AT,0.01,Edelweiss flower
+BE,2,Portrait of King Philippe
+BE,1,Portrait of King Philippe
+BE,0.50,Portrait of King Philippe
+BE,0.20,Portrait of King Philippe
+BE,0.10,Portrait of King Philippe
+BE,0.05,Portrait of King Philippe
+BE,0.02,Portrait of King Philippe
+BE,0.01,Portrait of King Philippe
+CY,2,Cruciform idol from Chalcolithic period
+CY,1,Cruciform idol from Chalcolithic period
+CY,0.50,Pommos ship
+CY,0.20,Pommos ship
+CY,0.10,Pommos ship
+CY,0.05,Kyrenia ship
+CY,0.02,Kyrenia ship
+CY,0.01,Kyrenia ship
+EE,2,Geographical image of Estonia
+EE,1,Geographical image of Estonia
+EE,0.50,Geographical image of Estonia
+EE,0.20,Geographical image of Estonia
+EE,0.10,Geographical image of Estonia
+EE,0.05,Geographical image of Estonia
+EE,0.02,Geographical image of Estonia
+EE,0.01,Geographical image of Estonia
+FI,2,Cloudberries and cloudberry flowers
+FI,1,Two flying swans
+FI,0.50,Lion from Finnish coat of arms
+FI,0.20,Lion from Finnish coat of arms
+FI,0.10,Lion from Finnish coat of arms
+FI,0.05,Lion from Finnish coat of arms
+FI,0.02,Lion from Finnish coat of arms
+FI,0.01,Lion from Finnish coat of arms
+FR,2,Tree symbolizing life
+FR,1,Tree symbolizing life
+FR,0.50,Marianne
+FR,0.20,Josephine Baker portrait (2024 series)
+FR,0.10,Hercules group
+FR,0.05,Young Marianne
+FR,0.02,Young Marianne
+FR,0.01,Young Marianne
+DE,2,Oak twig
+DE,1,Federal eagle
+DE,0.50,Brandenburg Gate
+DE,0.20,Brandenburg Gate
+DE,0.10,Brandenburg Gate
+DE,0.05,Oak leaves
+DE,0.02,Oak leaves
+DE,0.01,Oak leaves
+GR,2,Owl from ancient Athenian tetradrachm
+GR,1,Owl from ancient Athenian tetradrachm
+GR,0.50,Portrait of Eleftherios Venizelos
+GR,0.20,Portrait of Ioannis Capodistrias
+GR,0.10,Portrait of Rigas Feraios
+GR,0.05,Corvette warship
+GR,0.02,Tanker ship
+GR,0.01,Tripod from ancient Greek coin
+HR,2,Map of Croatia on chequerboard
+HR,1,Marten on chequerboard
+HR,0.50,Nikola Tesla portrait on chequerboard
+HR,0.20,Nikola Tesla portrait on chequerboard
+HR,0.10,Tuna fish on chequerboard
+HR,0.05,Glagolitic script on chequerboard
+HR,0.02,Glagolitic script on chequerboard
+HR,0.01,Glagolitic script on chequerboard
+IE,2,Celtic harp
+IE,1,Celtic harp
+IE,0.50,Celtic harp
+IE,0.20,Celtic harp
+IE,0.10,Celtic harp
+IE,0.05,Celtic harp
+IE,0.02,Celtic harp
+IE,0.01,Celtic harp
+IT,2,Dante Alighieri portrait
+IT,1,Leonardo da Vinci's Vitruvian Man
+IT,0.50,Emperor Marcus Aurelius equestrian statue
+IT,0.20,Futurist sculpture by Umberto Boccioni
+IT,0.10,Birth of Venus by William-Adolphe Bouguereau
+IT,0.05,Colosseum
+IT,0.02,Castel del Monte
+IT,0.01,Mole Antonelliana
+LV,2,Latvian folk maiden
+LV,1,Latvian folk maiden
+LV,0.50,Coat of arms of Latvia
+LV,0.20,Coat of arms of Latvia
+LV,0.10,Coat of arms of Latvia
+LV,0.05,Coat of arms of Latvia
+LV,0.02,Coat of arms of Latvia
+LV,0.01,Coat of arms of Latvia
+LT,2,Coat of arms (Vytis)
+LT,1,Coat of arms (Vytis)
+LT,0.50,Coat of arms (Vytis)
+LT,0.20,Coat of arms (Vytis)
+LT,0.10,Coat of arms (Vytis)
+LT,0.05,Coat of arms (Vytis)
+LT,0.02,Coat of arms (Vytis)
+LT,0.01,Coat of arms (Vytis)
+LU,2,Portrait of Grand Duke Henri
+LU,1,Portrait of Grand Duke Henri
+LU,0.50,Portrait of Grand Duke Henri
+LU,0.20,Portrait of Grand Duke Henri
+LU,0.10,Portrait of Grand Duke Henri
+LU,0.05,Portrait of Grand Duke Henri
+LU,0.02,Portrait of Grand Duke Henri
+LU,0.01,Portrait of Grand Duke Henri
+MT,2,Maltese Cross
+MT,1,Maltese Cross
+MT,0.50,Emblem of Malta
+MT,0.20,Emblem of Malta
+MT,0.10,Emblem of Malta
+MT,0.05,Neolithic temple altar
+MT,0.02,Neolithic temple altar
+MT,0.01,Neolithic temple altar
+MC,2,Portrait of Prince Albert II
+MC,1,Portrait of Prince Albert II
+MC,0.50,Monogram of Prince Albert II
+MC,0.20,Monogram of Prince Albert II
+MC,0.10,Monogram of Prince Albert II
+MC,0.05,Coat of arms of Monaco
+MC,0.02,Coat of arms of Monaco
+MC,0.01,Coat of arms of Monaco
+NL,2,Portrait of King Willem-Alexander
+NL,1,Portrait of King Willem-Alexander
+NL,0.50,Portrait of King Willem-Alexander
+NL,0.20,Portrait of King Willem-Alexander
+NL,0.10,Portrait of King Willem-Alexander
+NL,0.05,Portrait of King Willem-Alexander
+NL,0.02,Portrait of King Willem-Alexander
+NL,0.01,Portrait of King Willem-Alexander
+PT,2,Royal seal of 1144
+PT,1,Royal seal of 1144
+PT,0.50,Royal seal of 1134
+PT,0.20,Royal seal of 1134
+PT,0.10,Royal seal of 1134
+PT,0.05,Royal seal of 1142
+PT,0.02,Royal seal of 1142
+PT,0.01,Royal seal of 1142
+SM,2,Saint Marino portrait
+SM,1,Second Tower
+SM,0.50,Three Towers of San Marino
+SM,0.20,Church of San Quirino
+SM,0.10,Porta della Pieve gate
+SM,0.05,Statue of Liberty
+SM,0.02,Feathers of Three Towers
+SM,0.01,Coat of arms of San Marino
+SK,2,Double cross on three hills
+SK,1,Double cross on three hills
+SK,0.50,Bratislava Castle
+SK,0.20,Bratislava Castle
+SK,0.10,Bratislava Castle
+SK,0.05,Krivan peak
+SK,0.02,Krivan peak
+SK,0.01,Krivan peak
+SI,2,Portrait of Primož Trubar
+SI,1,Storks
+SI,0.50,Triglav mountain
+SI,0.20,Pair of Lipizzaner horses
+SI,0.10,Unfinished cathedral by Jože Plečnik
+SI,0.05,Sower scattering stars
+SI,0.02,Prince's Stone
+SI,0.01,Hayrack
+ES,2,Portrait of King Felipe VI
+ES,1,Portrait of King Felipe VI
+ES,0.50,Cathedral of Santiago de Compostela
+ES,0.20,Cathedral of Santiago de Compostela
+ES,0.10,Cathedral of Santiago de Compostela
+ES,0.05,Miguel de Cervantes
+ES,0.02,Miguel de Cervantes
+ES,0.01,Miguel de Cervantes
+VA,2,Coat of arms of Pope Leo XIV
+VA,1,Coat of arms of Pope Leo XIV
+VA,0.50,Coat of arms of Pope Leo XIV
+VA,0.20,Coat of arms of Pope Leo XIV
+VA,0.10,Coat of arms of Pope Leo XIV
+VA,0.05,Coat of arms of Pope Leo XIV
+VA,0.02,Coat of arms of Pope Leo XIV
+VA,0.01,Coat of arms of Pope Leo XIV
